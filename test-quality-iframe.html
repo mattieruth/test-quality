@@ -179,7 +179,9 @@
 
         const urlParams = new URLSearchParams(window.location.search);
         var url = urlParams.get('url');
-        var duration = urlParams.get('duration');
+        var duration = urlParams.has('duration')
+          ? Number(urlParams.get('duration'))
+          : undefined;
         window.dailyDebug = { callQualityTest: { url, duration } };
 
         console.log('running test call', url);
