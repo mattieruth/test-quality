@@ -179,7 +179,8 @@
 
         const urlParams = new URLSearchParams(window.location.search);
         var url = urlParams.get('url');
-        window.dailyDebug = { callQualityTest: { url } };
+        var duration = urlParams.get('duration');
+        window.dailyDebug = { callQualityTest: { url, duration } };
 
         console.log('running test call', url);
         let results = await testCall.testCallQuality({

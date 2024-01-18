@@ -87,10 +87,7 @@
         var url = urlParams.get('url');
 
         let iframe = document.createElement('iframe');
-        iframe.src = './test-quality-iframe.html';
-        if (url) {
-          iframe.src += `?url=${url}`;
-        }
+        iframe.src = `./test-quality-iframe.html?${urlParams.toString()}`;
         iframe.id = 'testFrame';
         iframe.width = '100%';
         iframe.height = '90%';
