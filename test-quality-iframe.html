@@ -2,6 +2,7 @@
   <head>
     <title>stream local video file</title>
     <script src="./daily.js"></script>
+    <script src="./canvas-helpers.js"></script>
     <!-- <script src="https://unpkg.com/@daily-co/daily-js@0.27.0"></script> -->
     <!-- <script src="https://unpkg.com/@daily-co/daily-js"></script> -->
   </head>
@@ -14,21 +15,24 @@
       let msgPort = null;
       let srcVid = null;
       let srcCanvas = null;
+      let canvasHelper = null;
       let testCall = DailyIframe.createCallObject();
+      let testParams = {};
 
       async function main() {
         window.addEventListener('message', handleMessage);
 
         window.testCall = testCall;
-        _setupSrc();
       }
 
       function handleMessage(msg) {
-        switch (msg.data) {
+        console.log('handleMessage', msg);
+        switch (msg.data?.action) {
           case 'connect':
             msgPort = msg.ports[0];
-            if (testFailed) {
-            }
+            testParams = msg.data.testParams || {};
+            _setupSrc(testParams.style);
+
             break;
           case 'stop':
             cancelTest();
@@ -36,23 +40,29 @@
         }
       }
 
-      function _setupSrc() {
-        _setupSrcVid();
-        if (!srcVid) {
-          _setupSrcCanvas();
-          if (!srcCanvas) {
-            testFailed = true;
-            msgPort?.postMessage({
-              results: {
-                result: 'failed',
-                errorMsg: 'captureStream not supported in browser',
-              },
-            });
+      function _setupSrc(style = 'video') {
+        if (style === 'video') {
+          _setupSrcVid();
+          if (!srcVid) {
+            // fall back
+            console.error('video element capture not supported. Using canvas.');
+            _setupSrcCanvas();
           }
+        } else {
+          _setupSrcCanvas(style);
+        }
+        if (!srcVid && !srcCanvas) {
+          testFailed = 'captureStream not supported in browser';
+          msgPort?.postMessage({
+            results: {
+              result: 'failed',
+              errorMsg: testFailed,
+            },
+          });
         }
       }
 
-      function _setupSrcCanvas() {
+      function _setupSrcCanvas(style = 'sequence') {
         let canvas = document.createElement('canvas');
         if (!canvas.captureStream) return;
 
@@ -63,73 +73,18 @@
         videosDiv.appendChild(canvas);
         srcCanvas = canvas;
 
-        let ctx = canvas.getContext('2d');
-
-        // Define the ball properties
-        const ballRadius = 350;
-        let x = canvas.width / 2;
-        let y = canvas.height / 2;
-        let dx = 2;
-        let dy = 2;
-
-        let lastIntTime = Date.now();
-        let lastDrawTime = Date.now();
-
-        // let int = setInterval(() => {
-        //   const now = Date.now();
-        //   // console.log('delta time', now - lastIntTime);
-        //   lastIntTime = now;
-        //   draw();
-        // }, 1000 / 31);
-        // window.drawInterval = int;
-
-        function draw() {
-          if (testCanceled) return;
-
-          // Clear the canvas
-          ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-          // Create a radial gradient for the ball
-          const gradient = ctx.createRadialGradient(x, y, 0, x, y, ballRadius);
-          gradient.addColorStop(0, 'red');
-          gradient.addColorStop(1, 'orange');
-
-          // Draw the ball
-          ctx.beginPath();
-          ctx.arc(x, y, ballRadius, 0, Math.PI * 2);
-          ctx.fillStyle = gradient;
-          ctx.fill();
-          ctx.closePath();
-
-          // Update ball position
-          x += dx;
-          y += dy;
-
-          // Bounce off the walls
-          if (x - ballRadius < 0 || x + ballRadius > canvas.width) {
-            dx = -dx;
-          }
-          if (y - ballRadius < 0 || y + ballRadius > canvas.height) {
-            dy = -dy;
-          }
-
-          if (!testStarted) {
-            runTest();
-          }
-          // Request the next animation frame
-          // setTimeout(() => draw(), 1000 / 31);
-          requestAnimationFrame(draw);
-        }
-        draw();
+        canvasHelper = new CanvasRenderer(canvas, runTest);
+        canvasHelper.render(style);
       }
 
       function _setupSrcVid() {
         let vid = document.createElement('video');
-        if (!vid.captureStream) return;
+        if (!vid.captureStream && !vid.mozCaptureStream) return;
 
         srcVid = vid;
         let videosDiv = document.getElementById('videos');
         srcVid = document.createElement('video');
+        srcVid.muted = true;
         srcVid.src = 'big_buck_bunny.mp4';
         srcVid.id = 'srcVid';
 
@@ -137,7 +92,7 @@
         srcVid.loop = true;
 
         srcVid.onplay = () => {
-          void runTest(testCall, srcVid);
+          void runTest();
         };
         srcVid.style.width = '100%';
 
@@ -150,8 +105,6 @@
           console.log('test canceled?');
           return;
         }
-
-        testStarted = true;
 
         let vidStream;
         if (srcVid?.captureStream) {
@@ -177,12 +130,15 @@
 
         let vidTrack = vidStream.getVideoTracks()[0];
 
-        const urlParams = new URLSearchParams(window.location.search);
-        var url = urlParams.get('url');
-        var duration = urlParams.has('duration')
-          ? Number(urlParams.get('duration'))
-          : undefined;
-        window.dailyDebug = { callQualityTest: { url, duration } };
+        let url = testParams.url;
+        let duration = testParams.duration;
+        let sendSettings = testParams.sendSettings;
+        window.dailyDebug = {
+          callQualityTest: { url, duration, sendSettings },
+        };
+        if (testParams.verbose) {
+          window.dailyDebug.metrics = { Telemetry: true };
+        }
 
         console.log('running test call', url);
         let results = await testCall.testCallQuality({
@@ -198,6 +154,7 @@
         let videosDiv = document.getElementById('videos');
         srcVid && videosDiv.removeChild(srcVid);
         srcCanvas && videosDiv.removeChild(srcCanvas);
+        canvasHelper?.abort();
         testCanceled = true;
       }
 
@@ -205,6 +162,7 @@
         console.log('test canceled');
         testCanceled = true;
         testCall.stopTestCallQuality();
+        canvasHelper?.abort();
       }
     </script>
   </body>

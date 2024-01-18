@@ -1,0 +1,84 @@
+#mainDiv {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  gap: 25px;
+}
+
+button {
+  font-size: 1.2em;
+  padding: 5px;
+  margin: 5px;
+}
+
+#local-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  flex: 1;
+  padding-right: 25px;
+  border-right: 2px solid gray;
+}
+
+#videos {
+  /* width: 50%;
+  min-width: 500px; */
+}
+
+#testing {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+fieldset {
+  max-width: 300px;
+}
+
+fieldset legend {
+  font-weight: bold;
+  font-size: 1.2em;
+}
+
+#ve[disabled] + label {
+  color: gray;
+}
+
+#roomUrl {
+  font-size: 1.2em;
+  width: 100%;
+}
+
+#sendSettings {
+  height: 10em;
+}
+
+#results {
+  flex-direction: column;
+}
+
+#result {
+  font-size: x-large;
+  margin-bottom: 5px;
+}
+
+.failed {
+  color: red;
+}
+
+.aborted {
+  color: dimgrey;
+}
+
+.good {
+  color: darkgreen;
+}
+
+.warning {
+  color: goldenrod;
+}
+
+.bad {
+  color: coral;
+}

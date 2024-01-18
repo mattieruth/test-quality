@@ -1,57 +1,49 @@
 <html>
   <head>
     <title>stream local video file</title>
+    <link rel="stylesheet" href="style.css" />
     <script src="./daily.js"></script>
     <!-- <script src="https://unpkg.com/@daily-co/daily-js@0.27.0"></script> -->
     <!-- <script src="https://unpkg.com/@daily-co/daily-js"></script> -->
   </head>
-  <style>
-    #mainDiv {
-      display: flex;
-      flex-direction: column;
-    }
-    button {
-      padding: 5px;
-      margin: 5px;
-    }
-    #results {
-      flex-direction: column;
-    }
-    #result {
-      font-size: x-large;
-      margin-bottom: 5px;
-    }
-    .failed {
-      color: red;
-    }
-    .aborted {
-      color: dimgrey;
-    }
-    .good {
-      color: darkgreen;
-    }
-    .warning {
-      color: goldenrod;
-    }
-    .bad {
-      color: coral;
-    }
-  </style>
   <body onload="main()">
     <div id="mainDiv">
       <div id="local-controls">
-        <button onclick="join()">join</button>
-        <button onclick="leave()">leave</button><br />
-        <button id="testBtn" onclick="runTest()">run test</button>
+        <input id="roomUrl" type="text"></input>
+        <button onclick="preCall()">run precall</button>
         <hr />
+        <div id="videos"></div>
       </div>
+      <div id="testing">
+        <fieldset>
+          <legend>Capture Source:</legend>
+          <div>
+            <input type="radio" id="ve" name="captureSource" value="video" checked/>
+            <label for="ve">video element</label>
+          </div>
+          <div>
+            <input type="radio" id="isc" name="captureSource" value="sequence"/>
+            <label for="isc">image sequence in canvas</label>
+          </div>
+          <div>
+            <input type="radio" id="bbc" name="captureSource" value="ball"/>
+            <label for="bbc">bouncing ball in canvas</label>
+          </div>
+          <div>
+            <input type="radio" id="grc" name="captureSource" value="gradient"/>
+            <label for="grc">moving gradient in canvas</label>
+          </div>
+        </fieldset>
+        <h3>Optional SendSettings Override:</h3>
+        <textarea id="sendSettings"></textarea>
+        <button id="testBtn" onclick="runTest()">run test</button>
       <div id="results" hidden="true">
         <h3>RESULTS</h3>
         <span id="result"></span>
         <span id="data"></span>
         <br />
       </div>
-      <div id="videos"></div>
+      </div>
     </div>
 
     <script>
@@ -60,17 +52,41 @@
       const dailyCall = DailyIframe.createCallObject({
         subscribeToTracksAutomatically: true,
         startAudioOff: true,
-        startVideoOff: true,
+        startVideoOff: false,
         userName: 'jackie joiner',
       });
       let testFrame = null;
 
       async function main() {
+        let roomInput = document.getElementById('roomUrl');
+        roomInput.value = window.ROOM_URL;
+
+        let tmpVidEl = document.createElement('video');
+        if (!tmpVidEl.captureStream && !tmpVidEl.mozCaptureStream) {
+          console.log('disable video option');
+          let rad = document.getElementById('ve');
+          rad.removeAttribute('checked');
+          rad.disabled = true;
+          rad = document.getElementById('isc');
+          rad.checked = true;
+        }
         window.call = dailyCall;
         call.on('track-started', displayTrack);
         call.on('track-stopped', destroyTrack);
         call.on('joined-meeting', handleJoin);
         call.on('participant-updated', logEvent);
+      }
+
+      async function preCall() {
+        try {
+          let urlField = document.getElementById('roomUrl');
+          let url = urlField.value;
+          console.log('JOIN ', url);
+          await call.startCamera({ url });
+          console.log('VERSION', DailyIframe.version());
+        } catch (e) {
+          console.error('join failed!', e);
+        }
       }
 
       async function runTest() {
@@ -83,11 +99,38 @@
         testBtn.innerHTML = 'stop test';
         testBtn.onclick = () => stopTest();
 
+        let testParams = {};
+        const opts = document.getElementsByName('captureSource');
+        let style;
+        for (const o of opts) {
+          if (o.checked) {
+            style = o.value;
+            break;
+          }
+        }
+        testParams.style = style ?? 'video';
+
+        try {
+          let ssEl = document.getElementById('sendSettings');
+          if (ssEl.value) {
+            let sendSettings = JSON.parse(ssEl.value.replace(/(\r\n|\n|\r)/gm,''));
+            testParams.sendSettings = sendSettings;
+          }
+        } catch (e) {
+          // void
+        }
+
         const urlParams = new URLSearchParams(window.location.search);
-        var url = urlParams.get('url');
+        if (urlParams.has('url')) {
+          testParams.url = urlParams.get('url');
+        }
+        if (urlParams.has('duration')) {
+          testParams.duration = Number(urlParams.get('duration')) * 1000;
+        }
+        testParams.verbose = true;
 
         let iframe = document.createElement('iframe');
-        iframe.src = `./test-quality-iframe.html?${urlParams.toString()}`;
+        iframe.src = `./test-quality-iframe.html?style=${style}&${urlParams.toString()}`;
         iframe.id = 'testFrame';
         iframe.width = '100%';
         iframe.height = '90%';
@@ -106,7 +149,10 @@
               testBtn.onclick = () => runTest();
             }
           };
-          iframe.contentWindow.postMessage('connect', '*', [testChannel.port2]);
+          iframe.contentWindow.postMessage({
+            action: 'connect',
+            testParams
+          }, '*', [testChannel.port2]);
         };
         document.body.appendChild(iframe);
         testFrame = iframe;
@@ -116,7 +162,7 @@
         console.log('stop test called');
         if (!testFrame) return;
         console.log('should stop');
-        testFrame.contentWindow.postMessage('stop', '*');
+        testFrame.contentWindow.postMessage({action: 'stop'}, '*');
       }
 
       function renderResults(results) {
@@ -193,20 +239,6 @@
 
       async function aTimeout(ms) {
         return new Promise((resolve) => setTimeout(() => resolve(), ms));
-      }
-
-      async function join() {
-        try {
-          console.log('JOIN ', window.ROOM_URL);
-          await call.join({
-            url: window.ROOM_URL,
-            // userData: { broadcastFrom: "CHANNEL" },
-          });
-          console.log('VERSION', DailyIframe.version());
-          // await call.join({url: window.ROOM_URL});
-        } catch (e) {
-          console.error('join failed!', e);
-        }
       }
 
       function handleJoin(e) {
