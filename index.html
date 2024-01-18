@@ -83,8 +83,14 @@
         testBtn.innerHTML = 'stop test';
         testBtn.onclick = () => stopTest();
 
+        const urlParams = new URLSearchParams(window.location.search);
+        var url = urlParams.get('url');
+
         let iframe = document.createElement('iframe');
         iframe.src = './test-quality-iframe.html';
+        if (url) {
+          iframe.src += `?url=${url}`;
+        }
         iframe.id = 'testFrame';
         iframe.width = '100%';
         iframe.height = '90%';

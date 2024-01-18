@@ -177,7 +177,11 @@
 
         let vidTrack = vidStream.getVideoTracks()[0];
 
-        console.log('running test call');
+        const urlParams = new URLSearchParams(window.location.search);
+        var url = urlParams.get('url');
+        window.dailyDebug = { callQualityTest: { url } };
+
+        console.log('running test call', url);
         let results = await testCall.testCallQuality({
           videoTrack: vidStream.getVideoTracks()[0],
         });
