@@ -1,0 +1,204 @@
+<html>
+  <head>
+    <title>stream local video file</title>
+    <script src="./daily.js"></script>
+    <!-- <script src="https://unpkg.com/@daily-co/daily-js@0.27.0"></script> -->
+    <!-- <script src="https://unpkg.com/@daily-co/daily-js"></script> -->
+  </head>
+  <body onload="main()">
+    <div id="videos" style="width: 100%"></div>
+    <script>
+      let testCanceled = false;
+      let testStarted = false;
+      let testFailed = false;
+      let msgPort = null;
+      let srcVid = null;
+      let srcCanvas = null;
+      let testCall = DailyIframe.createCallObject();
+
+      async function main() {
+        window.addEventListener('message', handleMessage);
+
+        window.testCall = testCall;
+        _setupSrc();
+      }
+
+      function handleMessage(msg) {
+        switch (msg.data) {
+          case 'connect':
+            msgPort = msg.ports[0];
+            if (testFailed) {
+            }
+            break;
+          case 'stop':
+            cancelTest();
+            break;
+        }
+      }
+
+      function _setupSrc() {
+        // _setupSrcVid();
+        if (!srcVid) {
+          _setupSrcCanvas();
+          if (!srcCanvas) {
+            testFailed = true;
+            msgPort?.postMessage({
+              results: {
+                result: 'failed',
+                errorMsg: 'captureStream not supported in browser',
+              },
+            });
+          }
+        }
+      }
+
+      function _setupSrcCanvas() {
+        let canvas = document.createElement('canvas');
+        if (!canvas.captureStream) return;
+
+        let videosDiv = document.getElementById('videos');
+        canvas.id = 'srcCanvas';
+        canvas.width = 1920;
+        canvas.height = 1080;
+        videosDiv.appendChild(canvas);
+        srcCanvas = canvas;
+
+        let ctx = canvas.getContext('2d');
+
+        // Define the ball properties
+        const ballRadius = 350;
+        let x = canvas.width / 2;
+        let y = canvas.height / 2;
+        let dx = 2;
+        let dy = 2;
+
+        let lastIntTime = Date.now();
+        let lastDrawTime = Date.now();
+
+        // let int = setInterval(() => {
+        //   const now = Date.now();
+        //   // console.log('delta time', now - lastIntTime);
+        //   lastIntTime = now;
+        //   draw();
+        // }, 1000 / 31);
+        // window.drawInterval = int;
+
+        function draw() {
+          if (testCanceled) return;
+
+          // Clear the canvas
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+          // Create a radial gradient for the ball
+          const gradient = ctx.createRadialGradient(x, y, 0, x, y, ballRadius);
+          gradient.addColorStop(0, 'red');
+          gradient.addColorStop(1, 'orange');
+
+          // Draw the ball
+          ctx.beginPath();
+          ctx.arc(x, y, ballRadius, 0, Math.PI * 2);
+          ctx.fillStyle = gradient;
+          ctx.fill();
+          ctx.closePath();
+
+          // Update ball position
+          x += dx;
+          y += dy;
+
+          // Bounce off the walls
+          if (x - ballRadius < 0 || x + ballRadius > canvas.width) {
+            dx = -dx;
+          }
+          if (y - ballRadius < 0 || y + ballRadius > canvas.height) {
+            dy = -dy;
+          }
+
+          if (!testStarted) {
+            runTest();
+          }
+          // Request the next animation frame
+          // setTimeout(() => draw(), 1000 / 31);
+          requestAnimationFrame(draw);
+        }
+        draw();
+      }
+
+      function _setupSrcVid() {
+        let vid = document.createElement('video');
+        if (!vid.captureStream) return;
+
+        srcVid = vid;
+        let videosDiv = document.getElementById('videos');
+        srcVid = document.createElement('video');
+        srcVid.src = 'big_buck_bunny.mp4';
+        srcVid.id = 'srcVid';
+
+        srcVid.autoplay = true;
+        srcVid.loop = true;
+
+        srcVid.onplay = () => {
+          void runTest(testCall, srcVid);
+        };
+        srcVid.style.width = '100%';
+
+        videosDiv.appendChild(srcVid);
+      }
+
+      async function runTest() {
+        console.log('run test yo');
+        if (testCanceled) {
+          console.log('test canceled?');
+          return;
+        }
+
+        testStarted = true;
+
+        let vidStream;
+        if (srcVid?.captureStream) {
+          console.log('from video??');
+          vidStream = srcVid.captureStream();
+        } else if (srcVid?.mozCaptureStream) {
+          console.log('from moz???');
+          vidStream = srcVid.mozCaptureStream();
+        } else if (srcCanvas?.captureStream) {
+          console.log('capture stream');
+          vidStream = srcCanvas.captureStream();
+          console.log('end');
+        } else {
+          console.log('captureStream not supported in browser');
+          msgPort?.postMessage({
+            results: {
+              result: 'failed',
+              errorMsg: 'captureStream not supported in browser',
+            },
+          });
+          return;
+        }
+
+        let vidTrack = vidStream.getVideoTracks()[0];
+
+        console.log('running test call');
+        let results = await testCall.testCallQuality({
+          videoTrack: vidStream.getVideoTracks()[0],
+        });
+
+        msgPort?.postMessage({ results });
+        testCall.destroy();
+        if (srcVid) {
+          srcVid.pause();
+          srcVid.srcObj = null;
+        }
+        let videosDiv = document.getElementById('videos');
+        srcVid && videosDiv.removeChild(srcVid);
+        srcCanvas && videosDiv.removeChild(srcCanvas);
+        testCanceled = true;
+      }
+
+      function cancelTest() {
+        console.log('test canceled');
+        testCanceled = true;
+        testCall.stopTestCallQuality();
+      }
+    </script>
+  </body>
+</html>

@@ -1,0 +1,225 @@
+<html>
+  <head>
+    <title>stream local video file</title>
+    <script src="./daily.js"></script>
+    <!-- <script src="https://unpkg.com/@daily-co/daily-js@0.27.0"></script> -->
+    <!-- <script src="https://unpkg.com/@daily-co/daily-js"></script> -->
+  </head>
+  <style>
+    #mainDiv {
+      display: flex;
+      flex-direction: column;
+    }
+    button {
+      padding: 5px;
+      margin: 5px;
+    }
+    #results {
+      flex-direction: column;
+    }
+    #result {
+      font-size: x-large;
+      margin-bottom: 5px;
+    }
+    .failed {
+      color: red;
+    }
+    .aborted {
+      color: dimgrey;
+    }
+    .good {
+      color: darkgreen;
+    }
+    .warning {
+      color: goldenrod;
+    }
+    .bad {
+      color: coral;
+    }
+  </style>
+  <body onload="main()">
+    <div id="mainDiv">
+      <div id="local-controls">
+        <button onclick="join()">join</button>
+        <button onclick="leave()">leave</button><br />
+        <button id="testBtn" onclick="runTest()">run test</button>
+        <hr />
+      </div>
+      <div id="results" hidden="true">
+        <h3>RESULTS</h3>
+        <span id="result"></span>
+        <span id="data"></span>
+        <br />
+      </div>
+      <div id="videos"></div>
+    </div>
+
+    <script>
+      window.ROOM_URL = 'https://ruthless.staging.daily.co/robots';
+
+      const dailyCall = DailyIframe.createCallObject({
+        subscribeToTracksAutomatically: true,
+        startAudioOff: true,
+        startVideoOff: true,
+        userName: 'jackie joiner',
+      });
+      let testFrame = null;
+
+      async function main() {
+        window.call = dailyCall;
+        call.on('track-started', displayTrack);
+        call.on('track-stopped', destroyTrack);
+        call.on('joined-meeting', handleJoin);
+        call.on('participant-updated', logEvent);
+      }
+
+      async function runTest() {
+        if (testFrame) return;
+
+        let div = document.getElementById('results');
+        div.style = 'display: none';
+
+        let testBtn = document.getElementById('testBtn');
+        testBtn.innerHTML = 'stop test';
+        testBtn.onclick = () => stopTest();
+
+        let iframe = document.createElement('iframe');
+        iframe.src = './test-quality-iframe.html';
+        iframe.id = 'testFrame';
+        iframe.width = '100%';
+        iframe.height = '90%';
+        iframe.hidden = true;
+        iframe.onload = () => {
+          testChannel = new MessageChannel();
+          testChannel.port1.onmessage = (msg) => {
+            if (msg.data?.results) {
+              window.testResults = msg.data.results;
+              console.log('RESULTS', JSON.stringify(window.testResults));
+              renderResults(msg.data.results);
+
+              document.body.removeChild(iframe);
+              testFrame = null;
+              testBtn.innerHTML = 'run test';
+              testBtn.onclick = () => runTest();
+            }
+          };
+          iframe.contentWindow.postMessage('connect', '*', [testChannel.port2]);
+        };
+        document.body.appendChild(iframe);
+        testFrame = iframe;
+      }
+
+      function stopTest() {
+        console.log('stop test called');
+        if (!testFrame) return;
+        console.log('should stop');
+        testFrame.contentWindow.postMessage('stop', '*');
+      }
+
+      function renderResults(results) {
+        let div = document.getElementById('results');
+        div.style = 'display: flex';
+        // div.hidden = false;
+        let result = document.getElementById('result');
+        result.innerHTML = results.result.toUpperCase();
+        result.className = '';
+        result.classList.add(results.result);
+        let dataSpan = document.getElementById('data');
+        dataSpan.innerHTML = '';
+
+        switch (results.result) {
+          case 'failed':
+            dataSpan.innerHTML = results.errorMsg;
+            break;
+          case 'aborted':
+            dataSpan.innerHTML = '';
+            break;
+          default: {
+            let data = results.data;
+            Object.entries(data).forEach(([k, v]) => {
+              dataSpan.innerHTML += `<b>${k}:</b> ${v}<br />`;
+            });
+          }
+        }
+      }
+
+      function displayTrack(evt) {
+        console.log('!!! TRACK STARTED', evt);
+        if (evt.track.kind === 'video') {
+          displayVideo(evt);
+        } else {
+          playAudio(evt);
+        }
+      }
+
+      function displayVideo(evt) {
+        console.log(evt);
+        let videosDiv = document.getElementById('videos');
+        let videoEl = document.createElement('video');
+        videosDiv.appendChild(videoEl);
+        videoEl.style.width = '100%';
+        videoEl.srcObject = new MediaStream([evt.track]);
+        videoEl.play();
+      }
+
+      function playAudio(evt) {
+        if (evt.participant.local) {
+          return;
+        }
+        let audioEl = document.createElement('audio');
+        document.body.appendChild(audioEl);
+        audioEl.srcObject = new MediaStream([evt.track]);
+        audioEl.play();
+      }
+
+      function destroyTrack(evt) {
+        console.log(
+          '!!! TRACK STOPPED',
+          evt.kind,
+          evt.participant && evt.participant.session_id
+        );
+        let els = Array.from(document.getElementsByTagName('video')).concat(
+          Array.from(document.getElementsByTagName('audio'))
+        );
+        for (let el of els) {
+          if (el.srcObject && el.srcObject.getTracks()[0] === evt.track) {
+            el.remove();
+          }
+        }
+      }
+
+      async function aTimeout(ms) {
+        return new Promise((resolve) => setTimeout(() => resolve(), ms));
+      }
+
+      async function join() {
+        try {
+          console.log('JOIN ', window.ROOM_URL);
+          await call.join({
+            url: window.ROOM_URL,
+            // userData: { broadcastFrom: "CHANNEL" },
+          });
+          console.log('VERSION', DailyIframe.version());
+          // await call.join({url: window.ROOM_URL});
+        } catch (e) {
+          console.error('join failed!', e);
+        }
+      }
+
+      function handleJoin(e) {
+        console.log('!! i joined!', e);
+        // console.log('!! participant counts', call.participantCounts());
+      }
+
+      function leave() {
+        call.leave();
+      }
+
+      function logEvent(evt) {
+        console.log('DAILY EVENT!');
+        console.log(evt);
+        console.log('-----------');
+      }
+    </script>
+  </body>
+</html>
