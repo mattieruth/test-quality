@@ -93,6 +93,10 @@
         srcVid.autoplay = true;
         srcVid.loop = true;
 
+        srcVid.oncanplay = () => {
+          console.log('i can play');
+          srcVid.play();
+        };
         srcVid.onplay = () => {
           void runTest();
         };
