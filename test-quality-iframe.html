@@ -29,6 +29,7 @@
         console.log('handleMessage', msg);
         switch (msg.data?.action) {
           case 'connect':
+            console.log('handle connect');
             msgPort = msg.ports[0];
             testParams = msg.data.testParams || {};
             _setupSrc(testParams.style);
@@ -81,6 +82,7 @@
         let vid = document.createElement('video');
         if (!vid.captureStream && !vid.mozCaptureStream) return;
 
+        console.log('using video for capture source');
         srcVid = vid;
         let videosDiv = document.getElementById('videos');
         srcVid = document.createElement('video');
@@ -97,6 +99,7 @@
         srcVid.style.width = '100%';
 
         videosDiv.appendChild(srcVid);
+        console.log('setup video');
       }
 
       async function runTest() {
