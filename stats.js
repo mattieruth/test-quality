@@ -1,4 +1,5 @@
 const MAX_DATA = 150;
+const SMOOTHING_FACTOR = 3;
 
 let statsObj = null;
 
@@ -16,8 +17,8 @@ function addStats(latestStats) {
   statsObj?.addStats(latestStats);
 }
 
-function resetStats(resetCharts) {
-  statsObj?.reset(resetCharts);
+function resetStats(resetCharts, sFactor) {
+  statsObj?.reset(resetCharts, sFactor);
 }
 
 class Stats {
@@ -139,7 +140,9 @@ class Stats {
     });
   }
 
-  reset(resetCharts) {
+  reset(resetCharts, sFactor = SMOOTHING_FACTOR) {
+    this.sFactor = sFactor;
+
     this.rttVals = [];
     this.aobVals = [];
     this.splVals = [];
@@ -167,30 +170,25 @@ class Stats {
 
     let valsToAverage = dataSet.slice(4);
 
-    let ema; // The running Exponential Moving Average
-    let initialSamples = []; // To store the first 3 samples
-    const alpha = 2 / (3 + 1); // Smoothing factor for EMA, using N = 3 to quickly adapt to changes
-    let sampleCount = 0; // The count of samples
+    let firstThree = valsToAverage.slice(0, 3);
+    let theRest = valsToAverage.slice(3, valsToAverage.length);
+
+    // Exponention Moving Average value.
+    // Initialize with the straight average of the first 3 samples
+    let ema = firstThree.reduce((a, b) => a + b, 0) / firstThree.length;
+
+    // if we only had 3 valid stats, return straight average
+    if (!theRest.length) return ema;
+
+    const alpha = 2 / (this.sFactor + 1); // Smoothing factor for EMA, using N = 3 to quickly adapt to changes
 
     // Callback function that receives the current send bitrate
     const updateEMA = (value) => {
-      sampleCount++;
-
-      // Only start calculating EMA after receiving 3 samples
-      if (sampleCount <= 3) {
-        initialSamples.push(value);
-        if (sampleCount === 3) {
-          // Initialize EMA with the average of the first 3 samples
-          ema =
-            initialSamples.reduce((a, b) => a + b, 0) / initialSamples.length;
-        }
-      } else {
-        // Update EMA with each new sample
-        ema = alpha * value + (1 - alpha) * ema;
-      }
+      // Update EMA with each new sample
+      ema = alpha * value + (1 - alpha) * ema;
     };
 
-    valsToAverage.forEach((v) => updateEMA(v));
+    theRest.forEach((v) => updateEMA(v));
     return ema;
   }
 

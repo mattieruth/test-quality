@@ -57,7 +57,7 @@
             <input type="checkbox" id="logVerbose">
             <label for="logVerbose" style="font-weight: bold">Console Log Raw WebRTC Stats:</label>
           </div>
-        </div>
+      </div>
         <button id="testBtn" onclick="runTest()">run test</button>
       <div id="results" hidden="true">
         <h3>RESULTS</h3>
@@ -71,6 +71,11 @@
     <div>
       <input type="checkbox" id="resetData">
       <label for="resetData" style="font-weight: bold">Reset Charts Before Run:</label>
+    </div>
+    <div>
+      <h4>Smoothing Factor:</h4>
+      <input type="range" id="sFactor" min="0" max="20" value="3">
+      <span id="sfVal"></span>
     </div>
     <div id="charts" class="frow">
     </div>
@@ -91,12 +96,20 @@
         let roomInput = document.getElementById('roomUrl');
         roomInput.value = window.ROOM_URL;
 
-        let slider = document.getElementById("duration");
-        let output = document.getElementById("dVal");
-        output.innerHTML = slider.value;
+        let dSlider = document.getElementById("duration");
+        let dOutput = document.getElementById("dVal");
+        dOutput.innerHTML = dSlider.value;
 
-        slider.oninput = function() {
-          output.innerHTML = this.value;
+        dSlider.oninput = function() {
+          dOutput.innerHTML = this.value;
+        }
+
+        let sfSlider = document.getElementById("sFactor");
+        let sfOutput = document.getElementById("sfVal");
+        sfOutput.innerHTML = sfSlider.value;
+
+        sfSlider.oninput = function() {
+          sfOutput.innerHTML = this.value;
         }
 
         let tmpVidEl = document.createElement('video');
@@ -141,7 +154,8 @@
         testBtn.onclick = () => stopTest();
 
         let resetEl = document.getElementById('resetData');
-        resetStats(resetEl.checked);
+        let sFactor = document.getElementById('sFactor');
+        resetStats(resetEl.checked, sFactor.valueAsNumber);
 
         let testParams = {};
         const opts = document.getElementsByName('captureSource');
