@@ -68,6 +68,10 @@
       </div>
     </div>
     <h2>Charts</h2>
+    <div>
+      <input type="checkbox" id="resetData">
+      <label for="resetData" style="font-weight: bold">Reset Charts Before Run:</label>
+    </div>
     <div id="charts" class="frow">
     </div>
     </div>
@@ -135,6 +139,9 @@
         let testBtn = document.getElementById('testBtn');
         testBtn.innerHTML = 'stop test';
         testBtn.onclick = () => stopTest();
+
+        let resetEl = document.getElementById('resetData');
+        resetStats(resetEl.checked);
 
         let testParams = {};
         const opts = document.getElementsByName('captureSource');
@@ -256,7 +263,7 @@
 
         graphsDiv.appendChild(_addGraph("rtt", "round trip time"));
         graphsDiv.appendChild(_addGraph("aob", "availableOutgoingBitrate"));
-        graphsDiv.appendChild(_addGraph("pl", "packet loss"));
+        graphsDiv.appendChild(_addGraph("spl", "send packet loss"));
         graphsDiv.appendChild(_addGraph("bps", "send bits per second"));
 
         return graphsDiv;
