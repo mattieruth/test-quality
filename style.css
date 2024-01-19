@@ -1,8 +1,10 @@
-#mainDiv {
+#controlsDiv {
   display: flex;
   flex-direction: row;
   align-items: stretch;
   gap: 25px;
+  border-bottom: 2px solid gray;
+  padding-bottom: 10px;
 }
 
 button {
@@ -16,6 +18,7 @@ input[type='text'] {
   width: 100%;
 }
 
+h3,
 h4 {
   margin-block-start: 0.5em;
   margin-block-end: 0.5em;
@@ -24,7 +27,7 @@ h4 {
 .fcol {
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 9px;
 }
 
 .frow {
@@ -100,4 +103,13 @@ fieldset legend {
 
 .bad {
   color: coral;
+}
+
+#charts {
+  flex-wrap: wrap;
+}
+
+.chart-div {
+  width: 45%;
+  margin-right: 4%;
 }

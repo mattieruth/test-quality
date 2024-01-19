@@ -3,11 +3,13 @@
     <title>stream local video file</title>
     <link rel="stylesheet" href="./style.css" />
     <script src="./daily.js"></script>
+    <script src="./stats.js"></script>
     <!-- <script src="https://unpkg.com/@daily-co/daily-js@0.27.0"></script> -->
     <!-- <script src="https://unpkg.com/@daily-co/daily-js"></script> -->
   </head>
   <body onload="main()">
-    <div id="mainDiv">
+    <div id="mainDiv" class="fcol">
+    <div id="controlsDiv">
       <div id="local-controls" class="fcol">
         <input id="roomUrl" type="text"></input>
         <button onclick="preCall()">run precall</button>
@@ -51,6 +53,10 @@
             <h4>Send settings:</h4>
             <textarea id="sendSettings"></textarea>
           </div>
+          <div>
+            <input type="checkbox" id="logVerbose">
+            <label for="logVerbose" style="font-weight: bold">Console Log Raw WebRTC Stats:</label>
+          </div>
         </div>
         <button id="testBtn" onclick="runTest()">run test</button>
       <div id="results" hidden="true">
@@ -60,6 +66,10 @@
         <br />
       </div>
       </div>
+    </div>
+    <h2>Charts</h2>
+    <div id="charts" class="frow">
+    </div>
     </div>
 
     <script>
@@ -99,6 +109,9 @@
         call.on('track-stopped', destroyTrack);
         call.on('joined-meeting', handleJoin);
         call.on('participant-updated', logEvent);
+
+        addCharts();
+        initializeCharts();
       }
 
       async function preCall() {
@@ -141,7 +154,7 @@
             testParams.sendSettings = sendSettings;
           }
         } catch (e) {
-          // void
+          console.warn('sendSettings provided were invalid JSON');
         }
 
         let roomEl = document.getElementById('roomOverride');
@@ -153,7 +166,9 @@
         if (durEl.valueAsNumber !== 10) {
           testParams.duration = durEl.valueAsNumber * 1000;
         }
-        testParams.verbose = true;
+
+        let verboseEl = document.getElementById('logVerbose');
+        testParams.verbose = verboseEl.checked;
 
         let iframe = document.createElement('iframe');
         iframe.src = `./test-quality-iframe.html`;
@@ -173,6 +188,9 @@
               testFrame = null;
               testBtn.innerHTML = 'run test';
               testBtn.onclick = () => runTest();
+            }
+            if(msg.data?.latestStats) {
+              updateCharts(msg.data.latestStats);
             }
           };
           iframe.contentWindow.postMessage({
@@ -216,6 +234,37 @@
             });
           }
         }
+      }
+
+      function _addGraph(id, name) {
+        let div = document.createElement("div");
+        div.id = id + "Div";
+        div.classList.add("chart-div");
+
+        let title = document.createElement("h3");
+        title.innerHTML = name;
+        div.appendChild(title);
+
+        let canvas = document.createElement("canvas");
+        canvas.id = id + "Chart";
+        div.appendChild(canvas);
+        return div;
+      }
+
+      function addCharts() {
+        let graphsDiv = document.getElementById("charts");
+
+        graphsDiv.appendChild(_addGraph("rtt", "round trip time"));
+        graphsDiv.appendChild(_addGraph("aob", "availableOutgoingBitrate"));
+        graphsDiv.appendChild(_addGraph("pl", "packet loss"));
+        graphsDiv.appendChild(_addGraph("bps", "send bits per second"));
+
+        return graphsDiv;
+      }
+
+      function updateCharts(latestStats) {
+        console.log('Latest Stat:', JSON.stringify(latestStats, null, 2));
+        addStats(latestStats);
       }
 
       function displayTrack(evt) {

@@ -133,16 +133,20 @@
         let duration = testParams.duration;
         let sendSettings = testParams.sendSettings;
         window.dailyDebug = {
-          callQualityTest: { url, duration, sendSettings },
+          callQualityTest: { url, duration, sendSettings, debugMode: true },
         };
         if (testParams.verbose) {
           window.dailyDebug.metrics = { Telemetry: true };
         }
-
         console.log('test params', testParams);
+
+        let statsInteval = setInterval(() => passStats(), 1000);
+
         let results = await testCall.testCallQuality({
           videoTrack: vidStream.getVideoTracks()[0],
         });
+
+        clearInterval(statsInteval);
 
         msgPort?.postMessage({ results });
         testCall.destroy();
@@ -162,6 +166,17 @@
         testCanceled = true;
         testCall.stopTestCallQuality();
         canvasHelper?.abort();
+      }
+
+      let lastLen = 0;
+      function passStats() {
+        if (testCanceled) return;
+
+        if (window.dailyDebug?.callQualityTest?.stats?.length > lastLen) {
+          const latestStats = window.dailyDebug.callQualityTest.stats[lastLen];
+          msgPort?.postMessage({ latestStats });
+          lastLen++;
+        }
       }
     </script>
   </body>
