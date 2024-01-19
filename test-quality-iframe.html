@@ -26,10 +26,8 @@
       }
 
       function handleMessage(msg) {
-        console.log('handleMessage', msg);
         switch (msg.data?.action) {
           case 'connect':
-            console.log('handle connect');
             msgPort = msg.ports[0];
             testParams = msg.data.testParams || {};
             _setupSrc(testParams.style);
@@ -82,7 +80,7 @@
         let vid = document.createElement('video');
         if (!vid.captureStream && !vid.mozCaptureStream) return;
 
-        console.log('using video for capture source');
+        console.log('capture source: video');
         srcVid = vid;
         let videosDiv = document.getElementById('videos');
         srcVid = document.createElement('video');
@@ -94,7 +92,6 @@
         srcVid.loop = true;
 
         srcVid.oncanplay = () => {
-          console.log('i can play');
           srcVid.play();
         };
         srcVid.onplay = () => {
@@ -103,11 +100,10 @@
         srcVid.style.width = '100%';
 
         videosDiv.appendChild(srcVid);
-        console.log('setup video');
       }
 
       async function runTest() {
-        console.log('run test yo');
+        console.log('starting the test...');
         if (testCanceled) {
           console.log('test canceled?');
           return;
@@ -115,15 +111,11 @@
 
         let vidStream;
         if (srcVid?.captureStream) {
-          console.log('from video??');
           vidStream = srcVid.captureStream();
         } else if (srcVid?.mozCaptureStream) {
-          console.log('from moz???');
           vidStream = srcVid.mozCaptureStream();
         } else if (srcCanvas?.captureStream) {
-          console.log('capture stream');
           vidStream = srcCanvas.captureStream();
-          console.log('end');
         } else {
           console.log('captureStream not supported in browser');
           msgPort?.postMessage({
@@ -147,7 +139,7 @@
           window.dailyDebug.metrics = { Telemetry: true };
         }
 
-        console.log('running test call', url);
+        console.log('test params', testParams);
         let results = await testCall.testCallQuality({
           videoTrack: vidStream.getVideoTracks()[0],
         });

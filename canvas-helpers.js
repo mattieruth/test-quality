@@ -36,6 +36,8 @@ class CanvasRenderer {
   }
 
   async drawImgSequence() {
+    console.log('capture source: images');
+
     const ctx = this.canvas.getContext('2d');
 
     // Folder path containing images on the server
@@ -125,6 +127,8 @@ class CanvasRenderer {
   }
 
   drawBall() {
+    console.log('capture source: ball');
+
     let ctx = this.canvas.getContext('2d');
 
     // Define the ball properties
@@ -184,6 +188,8 @@ class CanvasRenderer {
   }
 
   drawGradient() {
+    console.log('capture source: gradient');
+
     let ctx = this.canvas.getContext('2d');
 
     // Define gradient colors

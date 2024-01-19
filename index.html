@@ -1,20 +1,20 @@
 <html>
   <head>
     <title>stream local video file</title>
-    <link rel="stylesheet" href="style.css" />
+    <link rel="stylesheet" href="./style.css" />
     <script src="./daily.js"></script>
     <!-- <script src="https://unpkg.com/@daily-co/daily-js@0.27.0"></script> -->
     <!-- <script src="https://unpkg.com/@daily-co/daily-js"></script> -->
   </head>
   <body onload="main()">
     <div id="mainDiv">
-      <div id="local-controls">
+      <div id="local-controls" class="fcol">
         <input id="roomUrl" type="text"></input>
         <button onclick="preCall()">run precall</button>
         <hr />
         <div id="videos"></div>
       </div>
-      <div id="testing">
+      <div id="testing" class="fcol">
         <fieldset>
           <legend>Capture Source:</legend>
           <div>
@@ -34,8 +34,24 @@
             <label for="grc">moving gradient in canvas</label>
           </div>
         </fieldset>
-        <h3>Optional SendSettings Override:</h3>
-        <textarea id="sendSettings"></textarea>
+        <h3>Optional Test Overrides</h3>
+        <div id="overrides" class="fcol">
+          <div class="frow">
+            <div style="flex: 1">
+              <h4>Room URL:</h4>
+              <input id="roomOverride" name="roomOverride" type="text"></input>
+            </div>
+            <div style="flex: 1">
+              <h4>Duration:</h4>
+              <input type="range" id="duration" min="7" max="60" value="10">
+              <span id="dVal"></span>
+            </div>
+          </div>
+          <div>
+            <h4>Send settings:</h4>
+            <textarea id="sendSettings"></textarea>
+          </div>
+        </div>
         <button id="testBtn" onclick="runTest()">run test</button>
       <div id="results" hidden="true">
         <h3>RESULTS</h3>
@@ -60,6 +76,14 @@
       async function main() {
         let roomInput = document.getElementById('roomUrl');
         roomInput.value = window.ROOM_URL;
+
+        let slider = document.getElementById("duration");
+        let output = document.getElementById("dVal");
+        output.innerHTML = slider.value;
+
+        slider.oninput = function() {
+          output.innerHTML = this.value;
+        }
 
         let tmpVidEl = document.createElement('video');
         if (!tmpVidEl.captureStream && !tmpVidEl.mozCaptureStream) {
@@ -120,17 +144,19 @@
           // void
         }
 
-        const urlParams = new URLSearchParams(window.location.search);
-        if (urlParams.has('url')) {
-          testParams.url = urlParams.get('url');
+        let roomEl = document.getElementById('roomOverride');
+        if (roomEl.value) {
+          testParams.url = roomEl.value;
         }
-        if (urlParams.has('duration')) {
-          testParams.duration = Number(urlParams.get('duration')) * 1000;
+
+        let durEl = document.getElementById('duration');
+        if (durEl.valueAsNumber !== 10) {
+          testParams.duration = durEl.valueAsNumber * 1000;
         }
         testParams.verbose = true;
 
         let iframe = document.createElement('iframe');
-        iframe.src = `./test-quality-iframe.html?style=${style}&${urlParams.toString()}`;
+        iframe.src = `./test-quality-iframe.html`;
         iframe.id = 'testFrame';
         iframe.width = '100%';
         iframe.height = '90%';
