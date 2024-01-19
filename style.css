@@ -67,7 +67,8 @@ fieldset legend {
 #overrides {
 }
 
-#dVal {
+#dVal,
+#sfVal {
   font-size: 2em;
 }
 
