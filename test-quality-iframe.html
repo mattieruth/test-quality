@@ -140,13 +140,16 @@
         }
         console.log('test params', testParams);
 
-        let statsInteval = setInterval(() => passStats(), 1000);
+        let statsInterval = setInterval(() => {
+          passStats();
+          if (testCanceled) {
+            clearInterval(statsInterval);
+          }
+        }, 1000);
 
         let results = await testCall.testCallQuality({
           videoTrack: vidStream.getVideoTracks()[0],
         });
-
-        clearInterval(statsInteval);
 
         msgPort?.postMessage({ results });
         testCall.destroy();
@@ -170,8 +173,6 @@
 
       let lastLen = 0;
       function passStats() {
-        if (testCanceled) return;
-
         if (window.dailyDebug?.callQualityTest?.stats?.length > lastLen) {
           const latestStats = window.dailyDebug.callQualityTest.stats[lastLen];
           msgPort?.postMessage({ latestStats });

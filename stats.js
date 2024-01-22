@@ -166,9 +166,11 @@ class Stats {
   }
 
   calculateMovingAverage(dataSet) {
-    if (dataSet.length < 7) return 0;
-
     let valsToAverage = dataSet.slice(4);
+
+    valsToAverage = valsToAverage.filter((j) => j != null);
+
+    if (valsToAverage.length < 3) return 0;
 
     let firstThree = valsToAverage.slice(0, 3);
     let theRest = valsToAverage.slice(3, valsToAverage.length);
@@ -200,7 +202,6 @@ class Stats {
 
     const startTime = this.statsStartTime;
     const timeLabel = (latestStats.timestamp - startTime) / 1000;
-    console.log(`${timeLabel}`, latestStats);
     this.rttChart.data.labels.push(timeLabel);
     if (this.rttChart.data.labels.length > MAX_DATA) {
       this.rttChart.data.labels.shift();
@@ -221,14 +222,12 @@ class Stats {
     // update rtt chart
     const rttData = this.rttChart.data.datasets[0];
     const lastRTT = this.lastRTT || 0;
-    const curRTT =
-      latestStats.networkRoundTripTime != null
-        ? latestStats.networkRoundTripTime
-        : lastRTT;
-    this.lastRTT = curRTT;
+    const curRTT = latestStats.networkRoundTripTime;
+    const graphRTT = curRTT ?? lastRTT;
+    this.lastRTT = graphRTT;
 
     this.rttVals.push(curRTT);
-    rttData.data.push(curRTT);
+    rttData.data.push(graphRTT);
     if (rttData.data.length > MAX_DATA) {
       rttData.data.shift();
     }
@@ -244,14 +243,12 @@ class Stats {
     // update aob chart
     const aobData = this.aobChart.data.datasets[0];
     const lastAOB = this.lastAOB || 0;
-    const curAOB =
-      latestStats.availableOutgoingBitrate != null
-        ? latestStats.availableOutgoingBitrate
-        : lastAOB;
-    this.lastAOB = curAOB;
+    const curAOB = latestStats.availableOutgoingBitrate;
+    const graphAOB = curAOB ?? lastAOB;
+    this.lastAOB = graphAOB;
 
     this.aobVals.push(curAOB);
-    aobData.data.push(curAOB);
+    aobData.data.push(graphAOB);
     if (aobData.data.length > MAX_DATA) {
       aobData.data.shift();
     }
@@ -266,14 +263,14 @@ class Stats {
     // update spl chart
     const plData = this.splChart.data.datasets[0];
     const lastPL = this.lastPL || 0;
-    const curPL =
-      latestStats.videoSendPacketLoss != null
-        ? latestStats.videoSendPacketLoss
-        : lastPL;
-    this.lastPL = curPL;
+    const curPL = latestStats.totalSendPacketLoss;
+    // for graphing, if we get a null, we just re-use the last value.
+    // but we don't want that to skew our overall averaging.
+    const graphPL = curPL ?? lastPL;
+    this.lastPL = graphPL;
 
     this.splVals.push(curPL);
-    plData.data.push(curPL);
+    plData.data.push(graphPL);
     if (plData.data.length > MAX_DATA) {
       plData.data.shift();
     }
@@ -289,14 +286,12 @@ class Stats {
     // update bps chart
     const bpsData = this.bpsChart.data.datasets[0];
     const lastBPS = this.lastBPS || 0;
-    const curBPS =
-      latestStats.videoSendBitsPerSecond != null
-        ? latestStats.videoSendBitsPerSecond
-        : lastBPS;
-    this.lastBPS = curBPS;
+    const curBPS = latestStats.sendBitsPerSecond;
+    const graphBPS = curBPS ?? lastBPS;
+    this.lastBPS = graphBPS;
 
     this.bpsVals.push(curBPS);
-    bpsData.data.push(curBPS);
+    bpsData.data.push(graphBPS);
     if (bpsData.data.length > MAX_DATA) {
       bpsData.data.shift();
     }
