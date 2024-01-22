@@ -31,7 +31,7 @@ class CanvasRenderer {
     if (!this.hasRendered) return;
 
     let now = Date.now();
-    console.log(`fps: ${1000 / (now - this.lastDrawTime)}`);
+    console.log(`fps: ${500 / (now - this.lastDrawTime)}`);
     this.lastDrawTime = now;
   }
 
@@ -99,7 +99,7 @@ class CanvasRenderer {
 
       let img = images[index];
       // Draw the image at specific coordinates
-      ctx.drawImage(img, 0, 0, 1920, 1080);
+      ctx.drawImage(img, 0, 0, 960, 540);
 
       incrementing =
         index === 0 ? true : index === images.length - 1 ? false : incrementing;
@@ -122,7 +122,7 @@ class CanvasRenderer {
     if (this.renderOnInterval) {
       this.renderInterval = setInterval(() => {
         drawImage();
-      }, 1000 / 31);
+      }, 500 / 31);
     }
   }
 
@@ -183,7 +183,7 @@ class CanvasRenderer {
     if (this.renderOnInterval) {
       this.renderInterval = setInterval(() => {
         draw();
-      }, 1000 / 31);
+      }, 500 / 31);
     }
   }
 
@@ -242,7 +242,7 @@ class CanvasRenderer {
     if (this.renderOnInterval) {
       this.renderInterval = setInterval(() => {
         draw();
-      }, 1000 / 31);
+      }, 500 / 31);
     }
   }
 }

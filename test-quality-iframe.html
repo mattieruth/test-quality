@@ -67,8 +67,8 @@
 
         let videosDiv = document.getElementById('videos');
         canvas.id = 'srcCanvas';
-        canvas.width = 1920;
-        canvas.height = 1080;
+        canvas.width = 960;
+        canvas.height = 540;
         videosDiv.appendChild(canvas);
         srcCanvas = canvas;
 
@@ -85,7 +85,7 @@
         let videosDiv = document.getElementById('videos');
         srcVid = document.createElement('video');
         srcVid.muted = true;
-        srcVid.src = 'big_buck_bunny.mp4';
+        srcVid.src = 'vidyo4_540p_boomerang.webm';
         srcVid.id = 'srcVid';
 
         srcVid.autoplay = true;
