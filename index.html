@@ -2,17 +2,17 @@
   <head>
     <title>stream local video file</title>
     <link rel="stylesheet" href="./style.css" />
-    <!-- <script src="./daily.js"></script> -->
+    <script src="./daily.js"></script>
     <script src="./stats.js"></script>
     <!-- <script src="https://unpkg.com/@daily-co/daily-js@0.27.0"></script> -->
-    <script src="https://unpkg.com/@daily-co/daily-js"></script>
+    <!-- <script src="https://unpkg.com/@daily-co/daily-js"></script> -->
   </head>
   <body onload="main()">
     <div id="mainDiv" class="fcol">
     <div id="controlsDiv">
       <div id="local-controls" class="fcol">
         <input id="roomUrl" type="text"></input>
-        <button onclick="preCall()">run precall</button>
+        <button id="callBtn" onclick="preCall()">run precall</button>
         <hr />
         <div id="videos"></div>
       </div>
@@ -92,6 +92,8 @@
         userName: 'jackie joiner',
       });
       let testFrame = null;
+      let resolveWaitingResults = null;
+      let testResults = null;
 
       async function main() {
         let roomInput = document.getElementById('roomUrl');
@@ -134,13 +136,59 @@
 
       async function preCall() {
         try {
+          let callBtn = document.getElementById('callBtn');
+          callBtn.innerHTML = 'join';
+          callBtn.onclick = () => join();
+
           let urlField = document.getElementById('roomUrl');
+          urlField.hidden = true;
           let url = urlField.value;
-          console.log('JOIN ', url);
+          console.log('START CAMERA ', url);
           await call.startCamera({ url });
           console.log('VERSION', DailyIframe.version());
         } catch (e) {
           console.error('join failed!', e);
+        }
+      }
+
+      async function join() {
+        try {
+          let callBtn = document.getElementById('callBtn');
+          callBtn.innerHTML = 'leave';
+          callBtn.onclick = () => leave();
+          callBtn.disabled = true;
+
+          if (!testResults) {
+            console.log('Waiting on test results before join...');
+            const p = new Promise((resolve) => {
+              resolveWaitingResults = resolve;
+            });
+            stopTest();
+            await p;
+          }
+          dailyCall._logCallQualityTestResults(testResults.results);
+          resolveWaitingResults = null;
+          testResults = null;
+          console.log('JOINING');
+          await call.join();
+          callBtn.disabled = false;
+        } catch (e) {
+          console.error('join failed!', e);
+        }
+      }
+
+      async function leave() {
+        try {
+          await call.leave();
+
+          let callBtn = document.getElementById('callBtn');
+          callBtn.innerHTML = 'run precall';
+          callBtn.onclick = () => precall();
+
+          let urlField = document.getElementById('roomUrl');
+          urlField.hidden = false;
+        } catch (e) {
+          console.error('leave failed!', e);
         }
       }
 
@@ -203,8 +251,9 @@
           testChannel = new MessageChannel();
           testChannel.port1.onmessage = (msg) => {
             if (msg.data?.results) {
-              window.testResults = msg.data.results;
-              console.log('RESULTS', JSON.stringify(window.testResults));
+              testResults = msg.data;
+              console.log('RESULTS', JSON.stringify(testResults));
+              resolveWaitingResults && resolveWaitingResults();
               renderResults(msg.data.results);
 
               // give the frame time to get the last set of stats
