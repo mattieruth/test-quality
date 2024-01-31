@@ -166,12 +166,12 @@
             stopTest();
             await p;
           }
-          dailyCall._logCallQualityTestResults(testResults);
+          dailyCall._logCallQualityTestResults(testResults.results);
           resolveWaitingResults = null;
           testResults = null;
           console.log('JOINING');
           await call.join();
-          callBtn.disabled = true;
+          callBtn.disabled = false;
         } catch (e) {
           console.error('join failed!', e);
         }
